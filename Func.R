@@ -3,11 +3,11 @@ shear_FIT <- function(FPar,TestData) {
   # this functions calculates the later/axial strain rate
   # from Callahan 1999, Equation 4-3 on page 31
   # VALID FOR AXIAL COMPRESSION
-  # FPar: KAP0, KAP1, DDT, NK  
+  # FPar: KAP0, KAP1, DDT, NK
   # TestData: D, AS,LS  MS, DS
-  
+
   #browser()
-  
+
 	# deconstruct matrices
 	KAP0   <- as.numeric(FPar[1]) #Parameters$a #[1]
 	KAP1   <- as.numeric(FPar[2]) #Parameters$b #[2]
@@ -44,7 +44,7 @@ shear_RESID <- function (p,Observed,xx) {
 	# p  = input values for parameters:  KAP0, KAP1, DDT, NK
   # xx = values from test data: D, MS, DS
   # Observed = measured RAT (ELR/EAR)
-  
+
   #browser()
   Residual <- Observed - shear_FIT(p,xx)}
 
@@ -55,8 +55,8 @@ strain_Rates <- function(CPar, FPar, TestData){
   # Eqns. referenced from:  SAND97-2601
   # CPar: EAT0, ETA1, ETA2, NF, AA1, PP, NSP, R1, R3, R4, QSR
   # FPar: KAP0, KAP1, KAP2, NK, DDT
-  # TestData: 
-  
+  # TestData:
+
 	# ---- Flow Potential Parameters (5) *KAP2 HELD CONST. ----
 	KAP0	<- as.numeric(FPar[1])
 	KAP1 	<- as.numeric(FPar[2])
@@ -98,15 +98,14 @@ strain_Rates <- function(CPar, FPar, TestData){
 
 	# ---- fitting assumptions ----
 	RHOIS <- 2160.0	# ASSUMED IN SITU SALT DENSITY
-	NTIME <- 10^6		# NORMALIZING TIME
 	DSP 	<- 0.64		# FRACTIONAL DENSITY OF RANDOM DENSE SPHERICAL PARTICLES
 
 	# ---- Values input into function (18)----
-	#ICASE	<- as.numeric(TestData[,1])	  # TEST TYPE (1:Hyd Cons, 2:Shear Cons, 3:compaction)
-	#ITEST <- as.character(TestData[,2])	# TEST ID
+	#ICASE	<- as.numeric(TestData[,1])	# TEST TYPE (1:Hyd Cons;2:Shear Cons;3:compaction)
+	#ITEST <- as.character(TestData[,2])# TEST ID
 	TIME 	<- as.numeric(TestData[,3]) 	# TIME [SEC]
-	DT 		<- as.numeric(TestData[,4])	  # DELTA TIME [SEC]
-	#TF 		<- as.numeric(TestData[,5])	  # TOTAL TEST TIME [SEC]
+	#DT 		<- as.numeric(TestData[,4])	  # DELTA TIME [SEC]
+	#TF 		<- as.numeric(TestData[,5])	# TOTAL TEST TIME [SEC]
 	TEMP 	<- as.numeric(TestData[,6])	  # TEMP [K]
 	AS 		<- as.numeric(TestData[,7])	  # AXIAL STRESS [MPA]
 	LS 		<- as.numeric(TestData[,8])	  # LATERAL STRESS [MPA]
@@ -128,9 +127,11 @@ strain_Rates <- function(CPar, FPar, TestData){
 	D0 	<- 1382.4 / RHOIS			  # EMPLACED FRACTIONAL DENSITY ( NOT SURE WHERE 1382.4 CAME FROM?)
 	DI 	<- RHOI / RHOIS			    # INITIAL FRACTIONAL DENSITY
 
-	WT1 <- DT / NTIME	  # WEIGHTING FUNCTION FOR CREEP CONSOLIDATION PARAMETERS
-	WT 	<- 1					  # WEIGHTING FUNCTION FOR FLOW PARAMETERS
+  # ==== this portion has been moved to lambda <- function() =====
+	#WT1 <- DT / NTIME	  # WEIGHTING FUNCTION FOR CREEP CONSOLIDATION PARAMETERS
+	#WT 	<- 1					  # WEIGHTING FUNCTION FOR FLOW PARAMETERS
 	#DC 	<- DD					  # SET GRAIN SIZE FOR DCCS TESTS
+  # ==============================================================
 
 	Z1	<- EAC  # Predicted axial strain (initial values)
 	Z2	<- ELC  # Predicted lateral strain (initial values)
@@ -140,20 +141,20 @@ strain_Rates <- function(CPar, FPar, TestData){
   # ---- only calculate strain rates at TIME > 0 ----
  # browser()
  DZ <- ifelse(cbind(TIME > 0, TIME > 0, TIME > 0),
-{  
+{
   VOL  	<- Z1 + 2*Z2			    # VOLUMETRIC STRAIN
   VOLT	<- VOL + log(DSP/DI)	# USED FOR INITIAL ESTIMATE OF VOLUMETRIC STRAIN
   #DEN		<- DI/exp(VOL)			# CURRENT FRACTIONAL DENSITY
   DEN   <- D                  # CURRENT FRACTIONAL DENSITY
-  
-  ifelse(D >= 1, 
+
+  ifelse(D >= 1,
 {
   MD <- 0  # if fractional density is 1, disclocation creep = 0
-  SP <- 0},# if fractional density is 1, pressure solutioning = 0 
+  SP <- 0},# if fractional density is 1, pressure solutioning = 0
 
 {
   VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY CEILING ISH
-  
+
   # ---- Equivalent Stress ----
   OMEGAA 	<- ((1 - DEN) * NF / (1 - (1 - DEN)^(1/NF))^NF)^(2/(NF + 1))
   OMEGAK 	<- ((1 - VAR) * NK / (1 - (1 - VAR)^(1/NK))^NK)^(2/(NK + 1))
@@ -161,62 +162,64 @@ strain_Rates <- function(CPar, FPar, TestData){
   KAP		<- KAP0 * OMEGAK^KAP1
   TERMA	<- ((2 - DEN)/DEN)^((2 * NF)/(NF + 1))
   TERMK	<- ((2 - DEN)/DEN)^((2 * NK)/(NK + 1))
-  
+
   # ---- Eqn. 2-3 (SAND97-2601) ----
-  SEQF	<- sqrt(ETA * MS^2 + ETA2 * TERMA * DS^2)	# Equivalent stress measure for Disc. Creep and Press Sol'ing
-  SEQ		<- sqrt(KAP * MS^2 + KAP2 * TERMK * DS^2)	# Equivalent stress measure for Flow Potential
-  
+  SEQF	<- sqrt(ETA * MS^2 + ETA2 * TERMA * DS^2)	# Equivalent stress measure for
+                                                  # Disc. Creep and Press Sol'ing
+  SEQ		<- sqrt(KAP * MS^2 + KAP2 * TERMK * DS^2)	# Equivalent stress measure for
+                                                  # Flow Potential
+
   # ---- Eqn. 2-17 (SAND97-2601) ----
   ALPHA2	<- KAP * MS / 3
   BETA2	<- KAP2 * TERMK * DS
-  
+
   # ---- Eqn. 2-20 divided by equivalent stress (for later calculation) ----
   F2A <- 	(ALPHA2 - BETA2)/SEQ
   F2L <-	(ALPHA2 + 0.5 * BETA2)/SEQ
-  
+
   # ==== START: equivalent inelastic strain rate form for dislocation creep ====
-  
+
   # ---- Steady State Strain Rate Calc ----
-  ES1 <- A1 * (SEQF / MU)^N1 * exp(-Q1R/TEMP)	# Dislocation climb - Eqn. 2-30 
-  ES2 <- A2 * (SEQF / MU)^N2 * exp(-Q2R/TEMP)	# Undefined Mechanism - Eqn. 2-31 
-  
+  ES1 <- A1 * (SEQF / MU)^N1 * exp(-Q1R/TEMP)	# Dislocation climb - Eqn. 2-30
+  ES2 <- A2 * (SEQF / MU)^N2 * exp(-Q2R/TEMP)	# Undefined Mechanism - Eqn. 2-31
+
   # Slip - Eqn. 2-32 (SAND98-2601)
   H   <- SEQF - S0                              # HEAVISIDE FUNCTION
   ARG <- Q * (SEQF - S0) / MU
   ES3 <- ifelse(H > 0, 0.5 * (B1 * exp(-Q1R / TEMP) +
-                                (B2 * exp(-Q2R / TEMP)) * 
+                                (B2 * exp(-Q2R / TEMP)) *
                                 (exp(ARG) - exp(-ARG))),0)
-  
+
   ESS = ES1 + ES2 + ES3 # Steady-state strain rate, Eqn. 2-29 (SAND97-2601)
-  
+
   # ---- EVALUATE TRANSIENT FUNCTION, 3 branches: work hardening, equilibrium, recovery
   EFT  <- K0 * exp(C * TEMP) * (SEQF / MU) ^ M  # Transient Strain Limit, Eqn. 2-28
   BIGD <- ALPHA + BETA * log10(SEQF / MU)       # Work-Hardening parameter, Eqn 2-28
   FU <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
                                     exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
-  
+
   MD <- FU * ESS  # equivalent inelastic strain rate form for dislocation creep, Eqn 2-23
-  
+
   # ==== START: Equivalent Inelastic Strain Rate Form for Pressure Solutioning ====
-  
+
   # ---- Calculate initial volumetric strain - Based on spherical packing ----
   CR <- abs(exp(VOLT) - 1)
-  
+
   # ---- Determine functional form - either large or small strains, Eqn 2-34 ----
   GAMMA <- ifelse(CR <= 0.15, 1, abs((D0 - exp(VOLT)) / ((1 - D0) * exp(VOLT))) ^ NSP)
   # Small Strains (Vol Strain > - 15%)
   # Large Strains (Vol Strain < - 15%)
-  
+
   # ---- component of eqn 2-35 ---
-  X3 <- exp((R3 - 1) * VOLT) / (abs(1 - exp(VOLT))) ^ R4 
-  
+  X3 <- exp((R3 - 1) * VOLT) / (abs(1 - exp(VOLT))) ^ R4
+
   # ---- determine value of moisture function (w) ----
   M2 <- ifelse (W == 0, 0, W ^ AA1)     # moisture content  = 0
   # moisture content > 0
-  
+
   G2 <- 1 / DD ^ PP # calculate grain size function
   T2 <- exp(-QSR / TEMP) / TEMP
-  
+
   # ---- Equivalent Inelastic Strain Rate Form for Pressure Solutioning, Eqn 2-35
   SP <- R1 * M2 * G2 * T2 * X3 * GAMMA * SEQF})  # end check for D < 1
 
@@ -227,11 +230,37 @@ DZ3 <- (FU - 1) * ESS  # Predicted Steady-State Creep Rate
 cbind(DZ1, DZ2, DZ3)},{cbind(0,0,0)})
 return(DZ)}
 # ======================================================
-integrate.trap <- function(RATE,TIME){
-  # performs integral with respect to time on Strain Rate
-  
-  TIME <- rep(seq(0, 5, 1),3)
-  
-}
 
-	
+lambda <- function(CPar, FPar, TestData){
+  # ---- function calculates lambda, Eqn 4-4 (SAND 98-2680) ----
+
+  # ---- calculate weighting function ----
+  DT   	<- as.numeric(TestData[,4])	  # DELTA TIME [SEC]
+  NTIME <- 10^6		# NORMALIZING TIME (max testing time)
+  WT1   <- DT / NTIME    # WEIGHTING FUNCTION FOR CREEP CONSOLIDATION PARAMETERS
+
+  # ---- call function to calculate strain rates ----
+  ERATE.OUT <- strain_Rates(CPar, FPar, TestData)
+  colnames(ERATE.OUT) <- c("FEAR", "FELR", "FEVR") # assign column names
+
+  DATA.FIT <- cbind(TestData, ERATE.OUT, WT1)       # merge data
+
+  DT.DATA.FIT <- data.table(DATA.FIT)       # change format to data table
+  setkey(DT.DATA.FIT, ITEST)                # create a value to base subsets
+
+  # ---- data table containing calculated strains (integrated strain rates) ----
+  DT.FE <- DT.DATA.FIT[, c("IFEAR", "IFELR", "IFEVR"):=list(
+    as.vector(cumtrapz(TIME, FEAR)),
+    as.vector(cumtrapz(TIME, FELR)),
+    as.vector(cumtrapz(TIME, FEVR))), by = ITEST]
+
+  DT.RR <- data.table(ifelse(cbind(DT.FE$TIME > 0, DT.FE$TIME > 0),{
+    RR1 <- DT.FE$EAC / DT.FE$IFEAR # ratio of measured to predicted axial strains
+    RR2 <- DT.FE$ELC / DT.FE$IFELR # ratio of measured to predicted lateral strains
+    c(RR1, RR2)},{
+      c(0, 0)}))
+
+  OUT <- 1 - (((1 - DT.RR$RR1) ^ 2 + (1 - DT.RR$RR2) ^ 2 ) * WT1) ^ (1/2)
+  return(OUT)}
+
+

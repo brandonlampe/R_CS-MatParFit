@@ -2,33 +2,33 @@
 # Test <- as.numeric(c(0,1,2,3,0,1,2,3,0,2))
 # ID <- c("a","a","a","a","b","b","b","b","c","c")
 # DF <- data.frame(ID, Test)
-# 
-# 
+#
+#
 # library(plyr)
 # library(foreach)
 # library(pracma)
 # library(data.table)
-# 
+#
 # # ---- TRAPEZOIDAL RULE ----
 # #cumtrapz
 # RATE <- as.numeric(c(-1,-.5,-.3,-.1,-.05,-.01))
 # TTIME <- as.numeric(c(5,8,10,15,23,30))
 # Trap <- trapz(RATE,TTIME)
-# 
+#
 # TDIF <- diff(TTIME,lag=1)
 # RDIF <- -diff(-RATE,lag=1)
 # RSUM <- cumsum(RATE)
 # #INTEGRATE <- 0.5*diff(TTIME, lag = 1)*diffinv(RATE,lag = 1)
 # INTEGRATE <- 0.5*diffinv(RATE,lag = 1)
-# 
-# 
+#
+#
 # SUMOUT <- cbind(DF, SUM = c(lapply(split(DF, DF$ID), function(x) cumtrapz(x$Test)), recursive = T))
-# 
+#
 # # --------------------------------------------
 # PLY.Test <- ddply(DF,"ID", function(a) cumsum(a$Test))
-# 
+#
 # # --------------------------------------------
-# out <-ifelse(cbind(Test>0, Test>0, Test>0), 
+# out <-ifelse(cbind(Test>0, Test>0, Test>0),
 #        {C1 <- Test +1
 #         C2 <- Test +2
 #         C3 <- Test +3
@@ -37,7 +37,7 @@
 #         C2 <- Test +2
 #         C3 <- Test +3
 #         cbind(C1, C2, C3)})
-# 
+#
 
 # # ============= end test script ================
 # KAP0.INP <- 2.09011272735447
@@ -56,14 +56,14 @@ FLOW.INP<- cbind(KAP0.INP, KAP1.INP, KAP2.INP,
                  DDT.INP, NK.INP) # values for fiting parameters
 
 # ==== INPUT INITIAL VALUES FOR CREEP PARAMETERS ====
-# ---- Creep parameters, results from Callahan fits - shear tests only ---- 
+# ---- Creep parameters, results from Callahan fits - shear tests only ----
 ETA0  <- 0.1029          # -
 ETA1   <- 3.9387          # -
-ETA2 	<- 1               # constant - 
-NF 		<- 3.5122          # - 
-AA1 	<- 0.3147          # - 
-PP 		<- 1.6332          # - 
-NSP 	<- 0.5576          # - 
+ETA2 	<- 1               # constant -
+NF 		<- 3.5122          # -
+AA1 	<- 0.3147          # -
+PP 		<- 1.6332          # -
+NSP 	<- 0.5576          # -
 R1 		<- 1.041 * 10 ^ -6 # [K/(MPa-sec)]
 R3 		<- 15.1281         # -
 R4 		<- 0.1678          # -
@@ -77,10 +77,7 @@ CPar <- CREEP.INP
 FPar <- FLOW.INP
 
 # ---- use subset of full data set for debugging ----
-TestData <- DATA.NZ[which(DATA.NZ$ITEST == "SC1B"),] # SUBSET OF DATA FOR ANALYSIS
-# colnames(TestData) <- c("ICASE", "ITEST", "TIME", "DT", "TF", "TEMP", "AS",
-#                        "LS", "EVT", "EVC", "EAT", "EAC", "RHO", "D", "RHO0",
-#                        "RHOI", "DD", "W", "EVR", "EAR", "ELR", "RAT", "ELC")
+TestData <- DATA.INP[which(DATA.INP$ITEST == "SC1B"),] # SUBSET OF DATA FOR ANALYSIS
 
 # ---- Flow Potential Parameters (5) *KAP2 HELD CONST. ----
 KAP0	<- as.numeric(FPar[1])
@@ -165,20 +162,20 @@ Z3	<- 0
 # ---- only calculate strain rates at TIME > 0 ----
 # browser()
 ERATE.OUT <- data.frame(ifelse(cbind(TIME > 0, TIME > 0, TIME > 0),
-{	
+{
   VOL  	<- Z1 + 2*Z2			    # VOLUMETRIC STRAIN
   VOLT	<- VOL + log(DSP/DI)	# USED FOR INITIAL ESTIMATE OF VOLUMETRIC STRAIN
   #DEN		<- DI/exp(VOL)			# CURRENT FRACTIONAL DENSITY
   DEN   <- D                  # CURRENT FRACTIONAL DENSITY
-  
-  ifelse(D >= 1, 
+
+  ifelse(D >= 1,
 {
   MD <- 0  # if fractional density is 1, disclocation creep = 0
-  SP <- 0},# if fractional density is 1, pressure solutioning = 0 
+  SP <- 0},# if fractional density is 1, pressure solutioning = 0
 
 {
   VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY CEILING ISH
-  
+
   # ---- Equivalent Stress ----
   OMEGAA 	<- ((1 - DEN) * NF / (1 - (1 - DEN)^(1/NF))^NF)^(2/(NF + 1))
   OMEGAK 	<- ((1 - VAR) * NK / (1 - (1 - VAR)^(1/NK))^NK)^(2/(NK + 1))
@@ -186,62 +183,62 @@ ERATE.OUT <- data.frame(ifelse(cbind(TIME > 0, TIME > 0, TIME > 0),
   KAP		<- KAP0 * OMEGAK^KAP1
   TERMA	<- ((2 - DEN)/DEN)^((2 * NF)/(NF + 1))
   TERMK	<- ((2 - DEN)/DEN)^((2 * NK)/(NK + 1))
-  
+
   # ---- Eqn. 2-3 (SAND97-2601) ----
   SEQF	<- sqrt(ETA * MS^2 + ETA2 * TERMA * DS^2)	# Equivalent stress measure for Disc. Creep and Press Sol'ing
   SEQ		<- sqrt(KAP * MS^2 + KAP2 * TERMK * DS^2)	# Equivalent stress measure for Flow Potential
-  
+
   # ---- Eqn. 2-17 (SAND97-2601) ----
   ALPHA2	<- KAP * MS / 3
   BETA2	<- KAP2 * TERMK * DS
-  
+
   # ---- Eqn. 2-20 divided by equivalent stress (for later calculation) ----
   F2A <- 	(ALPHA2 - BETA2)/SEQ
   F2L <-	(ALPHA2 + 0.5 * BETA2)/SEQ
-  
+
   # ==== START: equivalent inelastic strain rate form for dislocation creep ====
-  
+
   # ---- Steady State Strain Rate Calc ----
-  ES1 <- A1 * (SEQF / MU)^N1 * exp(-Q1R/TEMP)	# Dislocation climb - Eqn. 2-30 
-  ES2 <- A2 * (SEQF / MU)^N2 * exp(-Q2R/TEMP)	# Undefined Mechanism - Eqn. 2-31 
-  
+  ES1 <- A1 * (SEQF / MU)^N1 * exp(-Q1R/TEMP)	# Dislocation climb - Eqn. 2-30
+  ES2 <- A2 * (SEQF / MU)^N2 * exp(-Q2R/TEMP)	# Undefined Mechanism - Eqn. 2-31
+
   # Slip - Eqn. 2-32 (SAND98-2601)
   H   <- SEQF - S0                              # HEAVISIDE FUNCTION
   ARG <- Q * (SEQF - S0) / MU
   ES3 <- ifelse(H > 0, 0.5 * (B1 * exp(-Q1R / TEMP) +
-                                (B2 * exp(-Q2R / TEMP)) * 
+                                (B2 * exp(-Q2R / TEMP)) *
                                 (exp(ARG) - exp(-ARG))),0)
-  
+
   ESS = ES1 + ES2 + ES3 # Steady-state strain rate, Eqn. 2-29 (SAND97-2601)
-  
+
   # ---- EVALUATE TRANSIENT FUNCTION, 3 branches: work hardening, equilibrium, recovery
   EFT  <- K0 * exp(C * TEMP) * (SEQF / MU) ^ M  # Transient Strain Limit, Eqn. 2-28
   BIGD <- ALPHA + BETA * log10(SEQF / MU)       # Work-Hardening parameter, Eqn 2-28
   FU <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
                                     exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
-  
+
   MD <- FU * ESS  # equivalent inelastic strain rate form for dislocation creep, Eqn 2-23
-  
+
   # ==== START: Equivalent Inelastic Strain Rate Form for Pressure Solutioning ====
-  
+
   # ---- Calculate initial volumetric strain - Based on spherical packing ----
   CR <- abs(exp(VOLT) - 1)
-  
+
   # ---- Determine functional form - either large or small strains, Eqn 2-34 ----
   GAMMA <- ifelse(CR <= 0.15, 1, abs((D0 - exp(VOLT)) / ((1 - D0) * exp(VOLT))) ^ NSP)
   # Small Strains (Vol Strain > - 15%)
   # Large Strains (Vol Strain < - 15%)
-  
+
   # ---- component of eqn 2-35 ---
-  X3 <- exp((R3 - 1) * VOLT) / (abs(1 - exp(VOLT))) ^ R4 
-  
+  X3 <- exp((R3 - 1) * VOLT) / (abs(1 - exp(VOLT))) ^ R4
+
   # ---- determine value of moisture function (w) ----
   M2 <- ifelse (W == 0, 0, W ^ AA1)     # moisture content  = 0
   # moisture content > 0
-  
+
   G2 <- 1 / DD ^ PP # calculate grain size function
   T2 <- exp(-QSR / TEMP) / TEMP
-  
+
   # ---- Equivalent Inelastic Strain Rate Form for Pressure Solutioning, Eqn 2-35
   SP <- R1 * M2 * G2 * T2 * X3 * GAMMA * SEQF})  # end check for D < 1
 
@@ -252,7 +249,26 @@ DZ3 <- (FU - 1) * ESS  # Predicted Steady-State Creep Rate
 c(DZ1, DZ2, DZ3)},{c(0,0,0)}))
 
 colnames(ERATE.OUT) <- c("FEAR", "FELR", "FEVR")         # column names
-DATA.FIT <- cbind(TestData, ERATE.OUT)       
+
+DATA.FIT <- cbind(TestData, ERATE.OUT, WT1)       # merge data
+
+DT.DATA.FIT <- data.table(DATA.FIT)       # change format to data table
+setkey(DT.DATA.FIT, ITEST)                # create a value for subsets
+
+# ---- data table ALL DATA (INCLUDING integrated strain rates) ----
+DT.FE <- DT.DATA.FIT[, c("IFEAR", "IFELR", "IFEVR"):=list(
+  as.vector(cumtrapz(TIME, FEAR)),
+  as.vector(cumtrapz(TIME, FELR)),
+  as.vector(cumtrapz(TIME, FEVR))), by = ITEST]
+
+# ---- check lambda calculation ----
+DT.RR <- data.table(ifelse(cbind(DT.FE$TIME > 0, DT.FE$TIME > 0),{
+  RR1 <- DT.FE$EAC / DT.FE$IFEAR # ratio of measured to predicted axial strains
+  RR2 <- DT.FE$ELC / DT.FE$IFELR # ratio of measured to predicted lateral strains
+  c(RR1, RR2)},{
+  c(0, 0)}))
+
+lambda <- 1 - (((1 - DT.RR$RR1) ^ 2 + (1 - DT.RR$RR2) ^ 2 ) * WT1) ^ (1/2)
 
 # ---- plot fit comparison (axial strain rate)----
 library(ggplot2)
@@ -278,15 +294,3 @@ ggSUB.EA <- ggSUB.EA + xlim(0,6e6) + ylim(-0.25,0)
 ggSUB.EA <- ggSUB.EA + ylab("Axial Strain: Calculated (dot) Vs. Measured (line)") + xlab("Time [sec]")
 ggSUB.EA
 
-
-
-# ---- calculate strains (integral of strain rates) ----
-EAC.FIT <- data.frame(TestData$V2, TestData$V3, DATA.FIT$FEAR)
-colnames(EAC.FIT) <- c("ITEST", "TIME", "FEAR")
-FEAC.CALC <- cbind(EAC.FIT, FEAC = c(lapply(split(EA.FIT, EA.FIT$ITEST), function(x) cumtrapz(x$FEAR)), recursive = T))
-FEAC <- FEAC.CALC$FEAC # fit of axial strain
-
-DATA.FIT <- cbind(DATA.NZ, ERATE.OUT, FEAC)
-
-E.FIT <- cbind()
-SUMOUT <- cbind(DF, SUM = c(lapply(split(DF, DF$ID), function(x) cumtrapz(x$Test)), recursive = T))
