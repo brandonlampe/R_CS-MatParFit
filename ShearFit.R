@@ -8,7 +8,7 @@ D  <- as.numeric(DATA.NZ$D)           # fraction density
 
 InVar    <- cbind(AS,LS,D)            # varibales input into nls.LM for fitting
 RAT.MEAS <- ifelse(DATA.NZ$TIME > 0,
-                   DATA.NZ$ELR / 
+                   DATA.NZ$ELR /
                    DATA.NZ$EAR, 0) # measured lateral-to-axial strain rates
 
 # ---- starting parameter values (from Callahan) ----
@@ -51,7 +51,7 @@ FIT_OUT.SC["Initial",] <- ParaStart
 row.names(FIT_OUT.SC)[1] <- "Final"
 print(FIT_OUT.SC)
 
-# ---- lost SSE into matrix ----
+# ---- SSE into matrix ----
 SSE_OUT.SC <- PAR.SHEAR[[8]]
 
 #==== capture output in text file ====

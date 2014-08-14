@@ -1,6 +1,7 @@
 #==== FUNCTION FOR EVALUATING SHEAR PARAMETERS ONLY ====
 shear_FIT <- function(FPar,TestData) {
-  # this functions calculates the later/axial strain rate
+  # response function
+  # calculates the later/axial strain rate
   # from Callahan 1999, Equation 4-3 on page 31
   # VALID FOR AXIAL COMPRESSION
   # FPar: KAP0, KAP1, DDT, NK
@@ -39,7 +40,8 @@ shear_FIT <- function(FPar,TestData) {
 
 # ==== Calculate residuals in the shear parameter fit ====
 shear_RESID <- function (p,Observed,xx) {
-  # Response function that defines residuals FOR SHEAR PARAMETERS ONLY
+  # object function
+  # defines residuals FOR SHEAR PARAMETERS ONLY
   # called by nls.lm
 	# p  = input values for parameters:  KAP0, KAP1, DDT, NK
   # xx = values from test data: D, MS, DS
@@ -47,8 +49,22 @@ shear_RESID <- function (p,Observed,xx) {
 
   #browser()
   Residual <- Observed - shear_FIT(p,xx)}
-
 # ======================================================
+
+creep_RESID <- function(p, xx, shear){
+  # object function
+  # defines residuals FOR CREEP PARAMETERS ONLY
+  # called by nls.lm
+  # p  = input values:  c(CPar, FPar)
+  # xx = values from test data
+
+  CREEP.PAR <-  p
+  FLOW.PAR  <-  shear
+
+  #browser()
+  Residual <- (1 - lambda(CREEP.PAR, FLOW.PAR, xx)) ^ 2}
+# ======================================================
+
 strain_Rates <- function(CPar, FPar, TestData){
   # function for calculating axial and lateral strain rates
   # Input must be in vector or matrix form, no data frames
@@ -67,7 +83,7 @@ strain_Rates <- function(CPar, FPar, TestData){
 	# ---- Creep Consolidation Parameters (11) *ETA2 HELD CONST
 	ETA0 	<- as.numeric(CPar[1])
 	ETA1 	<- as.numeric(CPar[2])
-	ETA2 	<- as.numeric(CPar[3])	# Constant = 1
+	ETA2 	<- 1 #as.numeric(CPar[3])	# Constant = 1
 	NF 		<- as.numeric(CPar[4])
 	AA1 	<- as.numeric(CPar[5])
 	PP 		<- as.numeric(CPar[6])
@@ -228,6 +244,8 @@ DZ2 <- (MD + SP) * F2L # Predicted lateral strain rate / derivative of strain
 DZ3 <- (FU - 1) * ESS  # Predicted Steady-State Creep Rate
 
 cbind(DZ1, DZ2, DZ3)},{cbind(0,0,0)})
+
+#browser()
 return(DZ)}
 # ======================================================
 
@@ -260,7 +278,8 @@ lambda <- function(CPar, FPar, TestData){
     c(RR1, RR2)},{
       c(0, 0)}))
 
-  OUT <- 1 - (((1 - DT.RR$RR1) ^ 2 + (1 - DT.RR$RR2) ^ 2 ) * WT1) ^ (1/2)
+#   browser()
+  OUT <- 1 - (((1 - DT.RR$V1) ^ 2 + (1 - DT.RR$V2) ^ 2 ) * WT1) ^ (1/2)
   return(OUT)}
 
 
