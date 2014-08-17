@@ -140,7 +140,7 @@ strain_Rates <- function(CPar, FPar, TestData){
 	MS 	<- (2.0 * LS + AS) / 3 	# MEAN STRESS
 	DS 	<- LS - AS				      # STRESS DIFFERENCE
 	ELC	<- (EVC - EAC) / 2		  # CREEP TRUE LATERAL STRAIN
-	D0 	<- 1382.4 / RHOIS			  # EMPLACED FRACTIONAL DENSITY ( NOT SURE WHERE 1382.4 CAME FROM?)
+	D0 	<- 1382.4 / RHOIS			  # EMPLACED FRACTIONAL DENSITY (0.64 FRAC DENSITY)
 	DI 	<- RHOI / RHOIS			    # INITIAL FRACTIONAL DENSITY
 
   # ==== this portion has been moved to lambda <- function() =====
@@ -151,104 +151,121 @@ strain_Rates <- function(CPar, FPar, TestData){
 
 	Z1	<- EAC  # Predicted axial strain (initial values)
 	Z2	<- ELC  # Predicted lateral strain (initial values)
-	Z3	<- 0
+	Z3	<- rep(0, size(ELC)[2]) # internal variable "xi" for the transient function (FU)
+	                            # integral of Eqn 2-27, (initial values)
 
 	# ==== define the differential equation ====
   # ---- only calculate strain rates at TIME > 0 ----
  # browser()
- DZ <- ifelse(cbind(TIME > 0, TIME > 0, TIME > 0),
-{
+ DZ <- ifelse(cbind(TIME > 0, TIME > 0, TIME > 0),{
   VOL  	<- Z1 + 2*Z2			    # VOLUMETRIC STRAIN
   VOLT	<- VOL + log(DSP/DI)	# USED FOR INITIAL ESTIMATE OF VOLUMETRIC STRAIN
   #DEN		<- DI/exp(VOL)			# CURRENT FRACTIONAL DENSITY
   DEN   <- D                  # CURRENT FRACTIONAL DENSITY
 
-  ifelse(D >= 1,
-{
-  MD <- 0  # if fractional density is 1, disclocation creep = 0
-  SP <- 0},# if fractional density is 1, pressure solutioning = 0
+  ifelse(D >= 1,{
+    MD <- 0  # if fractional density is 1, disclocation creep = 0
+    SP <- 0},# if fractional density is 1, pressure solutioning = 0
+  {
+    VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY CEILING ISH
 
-{
-  VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY CEILING ISH
+    # ---- Equivalent Stress ----
+    OMEGAA 	<- ((1 - DEN) * NF / (1 - (1 - DEN)^(1/NF))^NF)^(2/(NF + 1))
+    OMEGAK 	<- ((1 - VAR) * NK / (1 - (1 - VAR)^(1/NK))^NK)^(2/(NK + 1))
+    ETA		<- ETA0 * OMEGAA^ETA1
+    KAP		<- KAP0 * OMEGAK^KAP1
+    TERMA	<- ((2 - DEN)/DEN)^((2 * NF)/(NF + 1))
+    TERMK	<- ((2 - DEN)/DEN)^((2 * NK)/(NK + 1))
 
-  # ---- Equivalent Stress ----
-  OMEGAA 	<- ((1 - DEN) * NF / (1 - (1 - DEN)^(1/NF))^NF)^(2/(NF + 1))
-  OMEGAK 	<- ((1 - VAR) * NK / (1 - (1 - VAR)^(1/NK))^NK)^(2/(NK + 1))
-  ETA		<- ETA0 * OMEGAA^ETA1
-  KAP		<- KAP0 * OMEGAK^KAP1
-  TERMA	<- ((2 - DEN)/DEN)^((2 * NF)/(NF + 1))
-  TERMK	<- ((2 - DEN)/DEN)^((2 * NK)/(NK + 1))
-
-  # ---- Eqn. 2-3 (SAND97-2601) ----
-  SEQF	<- sqrt(ETA * MS^2 + ETA2 * TERMA * DS^2)	# Equivalent stress measure for
+    # ---- Eqn. 2-3 (SAND97-2601) ----
+    SEQF	<- sqrt(ETA * MS^2 + ETA2 * TERMA * DS^2)	# Equivalent stress measure for
                                                   # Disc. Creep and Press Sol'ing
-  SEQ		<- sqrt(KAP * MS^2 + KAP2 * TERMK * DS^2)	# Equivalent stress measure for
+    SEQ		<- sqrt(KAP * MS^2 + KAP2 * TERMK * DS^2)	# Equivalent stress measure for
                                                   # Flow Potential
 
-  # ---- Eqn. 2-17 (SAND97-2601) ----
-  ALPHA2	<- KAP * MS / 3
-  BETA2	<- KAP2 * TERMK * DS
+    # ---- Eqn. 2-17 (SAND97-2601) ----
+    ALPHA2	<- KAP * MS / 3
+    BETA2	<- KAP2 * TERMK * DS
 
-  # ---- Eqn. 2-20 divided by equivalent stress (for later calculation) ----
-  F2A <- 	(ALPHA2 - BETA2)/SEQ
-  F2L <-	(ALPHA2 + 0.5 * BETA2)/SEQ
+    # ---- Eqn. 2-20, WithOUT dislocation creep and pressure solutioning ----
+    F2A <- 	(ALPHA2 - BETA2)/SEQ        # fit to axial strains
+    F2L <-	(ALPHA2 + 0.5 * BETA2)/SEQ  # fit to lateral strains
+    F2V <-  3 * ALPHA2 / SEQ            # fit to volumetric strains
 
-  # ==== START: equivalent inelastic strain rate form for dislocation creep ====
+    # ==== START: equivalent inelastic strain rate form for dislocation creep ====
 
-  # ---- Steady State Strain Rate Calc ----
-  ES1 <- A1 * (SEQF / MU)^N1 * exp(-Q1R/TEMP)	# Dislocation climb - Eqn. 2-30
-  ES2 <- A2 * (SEQF / MU)^N2 * exp(-Q2R/TEMP)	# Undefined Mechanism - Eqn. 2-31
+    # ---- Steady State Strain Rate Calc ----
+    ES1 <- A1 * (SEQF / MU)^N1 * exp(-Q1R/TEMP)	# Dislocation climb - Eqn. 2-30
+    ES2 <- A2 * (SEQF / MU)^N2 * exp(-Q2R/TEMP)	# Undefined Mechanism - Eqn. 2-31
 
-  # Slip - Eqn. 2-32 (SAND98-2601)
-  H   <- SEQF - S0                              # HEAVISIDE FUNCTION
-  ARG <- Q * (SEQF - S0) / MU
-  ES3 <- ifelse(H > 0, 0.5 * (B1 * exp(-Q1R / TEMP) +
-                                (B2 * exp(-Q2R / TEMP)) *
-                                (exp(ARG) - exp(-ARG))),0)
+    # Slip - Eqn. 2-32 (SAND98-2601)
+    H   <- SEQF - S0                              # HEAVISIDE FUNCTION
+    ARG <- Q * (SEQF - S0) / MU
+    ES3 <- ifelse(H > 0, 0.5 * (B1 * exp(-Q1R / TEMP) +
+                                  (B2 * exp(-Q2R / TEMP)) *
+                                  (exp(ARG) - exp(-ARG))),0)
 
-  ESS = ES1 + ES2 + ES3 # Steady-state strain rate, Eqn. 2-29 (SAND97-2601)
+    ESS = ES1 + ES2 + ES3 # Steady-state strain rate, Eqn. 2-29 (SAND97-2601)
 
-  # ---- EVALUATE TRANSIENT FUNCTION, 3 branches: work hardening, equilibrium, recovery
-  EFT  <- K0 * exp(C * TEMP) * (SEQF / MU) ^ M  # Transient Strain Limit, Eqn. 2-28
-  BIGD <- ALPHA + BETA * log10(SEQF / MU)       # Work-Hardening parameter, Eqn 2-28
-  FU <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
-                                    exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
+    # ---- EVALUATE TRANSIENT FUNCTION, 3 branches: work hardening, equilibrium, recovery
+    EFT  <- K0 * exp(C * TEMP) * (SEQF / MU) ^ M  # Transient Strain Limit, Eqn. 2-28
+    BIGD <- ALPHA + BETA * log10(SEQF / MU)       # Work-Hardening parameter, Eqn 2-28
+    FU <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
+                                      exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
 
-  MD <- FU * ESS  # equivalent inelastic strain rate form for dislocation creep, Eqn 2-23
+    MD <- FU * ESS  # equivalent inelastic strain rate form for dislocation creep, Eqn 2-23
 
-  # ==== START: Equivalent Inelastic Strain Rate Form for Pressure Solutioning ====
+    # ==== START: Equivalent Inelastic Strain Rate Form for Pressure Solutioning ====
 
-  # ---- Calculate initial volumetric strain - Based on spherical packing ----
-  CR <- abs(exp(VOLT) - 1)
+    # ---- Calculate initial volumetric strain - Based on spherical packing ----
+    CR <- abs(exp(VOLT) - 1)
 
-  # ---- Determine functional form - either large or small strains, Eqn 2-34 ----
-  GAMMA <- ifelse(CR <= 0.15, 1, abs((D0 - exp(VOLT)) / ((1 - D0) * exp(VOLT))) ^ NSP)
-  # Small Strains (Vol Strain > - 15%)
-  # Large Strains (Vol Strain < - 15%)
+    # ---- Determine functional form - either large or small strains, Eqn 2-34 ----
+    GAMMA <- ifelse(CR <= 0.15, 1, abs((D0 - exp(VOLT)) / ((1 - D0) * exp(VOLT))) ^ NSP)
+    # Small Strains (Vol Strain > - 15%)
+    # Large Strains (Vol Strain < - 15%)
 
-  # ---- component of eqn 2-35 ---
-  X3 <- exp((R3 - 1) * VOLT) / (abs(1 - exp(VOLT))) ^ R4
+    # ---- component of eqn 2-35 ---
+    X3 <- exp((R3 - 1) * VOLT) / (abs(1 - exp(VOLT))) ^ R4
 
-  # ---- determine value of moisture function (w) ----
-  M2 <- ifelse (W == 0, 0, W ^ AA1)     # moisture content  = 0
-  # moisture content > 0
+    # ---- determine value of moisture function (w) ----
+    M2 <- ifelse (W == 0, 0, W ^ AA1)     # moisture content  = 0
+    # moisture content > 0
 
-  G2 <- 1 / DD ^ PP # calculate grain size function
-  T2 <- exp(-QSR / TEMP) / TEMP
+    G2 <- 1 / DD ^ PP # calculate grain size function
+    T2 <- exp(-QSR / TEMP) / TEMP
 
-  # ---- Equivalent Inelastic Strain Rate Form for Pressure Solutioning, Eqn 2-35
-  SP <- R1 * M2 * G2 * T2 * X3 * GAMMA * SEQF})  # end check for D < 1
+    # ---- Equivalent Inelastic Strain Rate Form for Pressure Solutioning, Eqn 2-35
+    SP <- R1 * M2 * G2 * T2 * X3 * GAMMA * SEQF})  # end check for D < 1
+# browser()
+  DZ1 <- (MD + SP) * F2A # Predicted axial strain rate / derivative of strain
+  DZ2 <- (MD + SP) * F2L # Predicted lateral strain rate / derivative of strain
+  DZ3 <- (FU - 1) * ESS  # Predicted Steady-State Creep Rate
 
-DZ1 <- (MD + SP) * F2A # Predicted axial strain rate / derivative of strain
-DZ2 <- (MD + SP) * F2L # Predicted lateral strain rate / derivative of strain
-DZ3 <- (FU - 1) * ESS  # Predicted Steady-State Creep Rate
-
-cbind(DZ1, DZ2, DZ3)},{cbind(0,0,0)})
+  cbind(DZ1, DZ2, DZ3)},{cbind(0,0,0)})
 
 #browser()
 return(DZ)}
 # ======================================================
 
+# XI <- function(Z3, BIGD, DELTA, EFT, ESS, TIME){
+#
+#   FU.I <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
+#                                     exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
+#
+#   DZ3.0 <- (FU.I - 1) * ESS # derivative
+#
+#   if (abs(DZ3) < 10 * .Macine$double.eps),{}{}
+#
+#   ITER <- 0
+#   i <- 1
+#   while (ITER < 100) {
+#     i <- i + 1
+#
+#
+#   }
+# }
+# ======================================================
 lambda <- function(CPar, FPar, TestData){
   # ---- function calculates lambda, Eqn 4-4 (SAND 98-2680) ----
 
@@ -275,11 +292,12 @@ lambda <- function(CPar, FPar, TestData){
   DT.RR <- data.table(ifelse(cbind(DT.FE$TIME > 0, DT.FE$TIME > 0),{
     RR1 <- DT.FE$EAC / DT.FE$IFEAR # ratio of measured to predicted axial strains
     RR2 <- DT.FE$ELC / DT.FE$IFELR # ratio of measured to predicted lateral strains
-    c(RR1, RR2)},{
-      c(0, 0)}))
+    c(RR1, RR2)},
+    {c(0, 0)}))
 
+  setnames(DT.RR, 1:2, c("RR1", "RR2"))
 #   browser()
-  OUT <- 1 - (((1 - DT.RR$V1) ^ 2 + (1 - DT.RR$V2) ^ 2 ) * WT1) ^ (1/2)
+  OUT <- 1 - (((1 - DT.RR$RR1) ^ 2 + (1 - DT.RR$RR2) ^ 2 ) * WT1) ^ (1/2)
   return(OUT)}
 
 

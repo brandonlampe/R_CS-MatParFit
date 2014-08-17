@@ -10,7 +10,7 @@ CurrentDirectory <- getwd()
 # CurrentDirectory <- "~/R/WorkingDirectory/MatFit_v1-2"
 # setwd(CurrentDirectory)
 
-# load necessary libraries
+# load libraries
 library("minpack.lm")
 library("ggplot2")
 library("plyr")

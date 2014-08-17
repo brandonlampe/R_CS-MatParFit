@@ -65,7 +65,7 @@ FIT_OUT.CREEP[1,] <- data.frame(ETA0.FIT, ETA1.FIT, ETA2.FIT, NF.FIT, AA1.FIT, P
 
 colnames(FIT_OUT.CREEP) <- c("ETA0", "ETA1", "ETA2", "NF", "AA1",
                                  "PP","NSP", "R1", "R3", "R4", "QSR")
-rownames(FIT_OUT.CREEP) <- c("Final", "Intial")
+rownames(FIT_OUT.CREEP) <- c("Final", "Initial")
 
 FIT_OUT.CREEP[2,] <- CREEP.INP
 print(FIT_OUT.CREEP)
