@@ -16,7 +16,11 @@ library("ggplot2")
 library("plyr")
 library("data.table")
 library("pracma")
-
+library("binhf")
+library("foreach")
+library("iterators")
+library("deSolve")
+library("FME")
 #--------------------------
 
 source("Load.R")

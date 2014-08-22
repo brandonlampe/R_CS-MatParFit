@@ -1,10 +1,12 @@
-
-# # ============= end test script ================
+# SCRIPT USED TO CALCULATE STRAINS & TEST FUNCTIONS PRIOR TO IMPLEMENTATION
+# MATERIAL PARAMETER FITS WILL BE DETERMINED USING "ShearFit.R" & "CreepFit.R"
+#
+# # ============= START ================
 # KAP0.INP <- 2.09011272735447
 # KAP1.INP <- 1.32951908075078
 # DDT.INP  <- 0.900012234998625
 # NK.INP   <- 2.75382483799085
-# KAP2.INP <- 1                  # CONSTANT
+# KAP2.INP <- 1
 
 KAP0.INP <- 10.119
 KAP1.INP <- 1.005
@@ -189,26 +191,60 @@ ERATE.OUT <- data.frame(ifelse(cbind(TIME > 0, TIME > 0, TIME > 0),
   EFT  <- K0 * exp(C * TEMP) * (SEQF / MU) ^ M  # Transient Strain Limit, Eqn. 2-28
   BIGD <- ALPHA + BETA * log10(SEQF / MU)       # Work-Hardening parameter, Eqn 2-28
   # ===================================
-
+  # ----variables initialized outside of loop for debugging ----
+  Z3  <- rep(0, size(ELC)[2])
+  DT.I <- DT
+  POW <- rep(0, size(ELC)[2])
+  ERROR.OUT <- rep(1, size(ELC)[2])
+  ERROR.INN <- rep(1, size(ELC)[2])
+  # FU.I calculated with vector of zeros (Z3)
   FU.I <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
                                      exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
-  DZ3.I <- (FU.I - 1) * ESS
+  DZ3.I <- (FU.I - 1) * ESS # derivative calculated
 
-  Z3.I <- Z3
+  # derivative integrated to yield orignal values (first iteration)
   Z3.I <- ifelse(TIME > 0, 0.5 * DT * (shift(DZ3.I, 1, "right") + DZ3.I), 0)
-  Z3.CHECK <- Z3.I
-  iter <- 0
-  itermax <- 10^6
 
-  while ((abs(sum(Z3.I^2 - Z3^2)) > 1E-4) && (iter < itermax)){
+  Z3.CHECK <- Z3.I # for debugging
+
+  IT.OUT <- 0
+  IT.INN <- 0
+  IMAX <- 100
+  TOL <- 1e-9
+  IN.TIME <- proc.time()
+  ERROR.OUT <- rep(1, size(ELC)[2])
+
+ while((rev(ERROR.OUT) > TOL) && (IT.OUT < IMAX)){
+    IT.OUT <- IT.OUT + 1
     Z3 <- Z3.I
-    FU.I <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
-                                    exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
+    FU.I <- ifelse(Z3 == EFT, {1},{ifelse(Z3 < EFT,{
+                          exp(BIGD * (1 - Z3 / EFT) ^ 2)},{
+                          exp(-DELTA * (1 - Z3 / EFT) ^ 2)})})
     DZ3.I <- (FU.I - 1) * ESS
     Z3.I <- ifelse(TIME > 0, 0.5 * DT * (shift(DZ3.I, 1, "right") + DZ3.I), 0)
+    ERROR.OUT <- abs(Z3.I - Z3)}
+# ---- SPLIT TIME ----
+#     if(ERROR.OUT > TOL){
+# #       while((rev(ERROR.INN) < TOL) && (IT.INN < IMAX)){
+#         POW <- POW + 1
+#         IT.INN <- IT.INN + 1
+#         DT.H <- DT.I/(2^POW)
+#         Z3 <- Z3.I
+#         FU.I <- ifelse(Z3 == EFT, {1},{ifelse(Z3 < EFT,{
+#           exp(BIGD * (1 - Z3 / EFT) ^ 2)},{
+#             exp(-DELTA * (1 - Z3 / EFT) ^ 2)})})
+#         Z3.I <- ifelse(TIME > 0, 0.5 * DT.H * (shift(DZ3.I, 1, "right") + DZ3.I), 0)
+#         ERROR.INN <- abs(Z3.I - Z3)
+#         print(c("INNER WITH", IT.INN, ERROR.INN))}
+# }
 
-    iter <- iter + 1
-    print(iter)}
+# ---- END OUTER WITH
+    print(c("OUTER WITH", IT.OUT, ERROR.OUT))}
+#===============================================
+  OUT.TIME <- proc.time()
+  Z3.I - Z3
+
+abs(sum(Z3.I - Z3))
 
   FU <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
                                     exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
