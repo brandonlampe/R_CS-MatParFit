@@ -2,20 +2,25 @@
 #Calls all the routines necessary for fitting shear parameters
 
 #==== set working directory and load libraries ====
-#store current directory
-Initial.dir <- getwd()
+# #store current directory
+# Initial.dir <- getwd()
+#
+# #change to new directory
+CurrentDirectory <- getwd()
+# CurrentDirectory <- "~/R/WorkingDirectory/MatFit_v1-2"
+# setwd(CurrentDirectory)
 
-#change to new directory
-CurrentDirectory <- "~/R/WorkingDirectory/MatFit_v1-2"
-setwd(CurrentDirectory)
-
-# load necessary libraries
+# load libraries
 library("minpack.lm")
 library("ggplot2")
 library("plyr")
 library("data.table")
 library("pracma")
-
+library("binhf")
+library("foreach")
+library("iterators")
+library("deSolve")
+library("FME")
 #--------------------------
 
 source("Load.R")
