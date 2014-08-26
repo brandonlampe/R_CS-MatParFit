@@ -1,6 +1,7 @@
-
 #Calls all the routines necessary for fitting shear parameters
 
+# ---- clear memory ----
+rm(list = ls())
 #==== set working directory and load libraries ====
 # #store current directory
 # Initial.dir <- getwd()
@@ -30,5 +31,3 @@ source("DefPara.R")
 #source("ValidateSC.R")
 #source("Plot_Output.R")
 
-# clear workspace
-#rm(list = ls())
