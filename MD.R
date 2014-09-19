@@ -41,24 +41,6 @@ setnames(ODE.DT,c("TIME", "Z1", "Z2", "Z3",
                   "SEQF", "BIGD", "DEBUG.FU", "DEBUG.GAMMA",
                   "DEBUG.ES3", "AS", "LS"))
 
-DEBUG.FU <- P.CER[,5] # DEBUG.FU
-BRANCH.FU <- table(DEBUG.FU)
-BRANCH.FU
-
-DEBUG.GAMMA <- P.CER[,6] # DEBUG.GAMMA
-BRANCH.GAMMA <- table(DEBUG.GAMMA)
-BRANCH.GAMMA
-
-GAMMA <- P.CER[,7]
-
-DEBUG.ES3 <- P.CER[,8] # DEBUG.ES3
-BRANCH.ES3 <- table(DEBUG.ES3)
-BRANCH.ES3
-
-DEBUG.VAR <- P.CER[,9] # DEBUG.VAR
-BRANCH.VAR <- table(DEBUG.VAR)
-BRANCH.VAR
-
 plot(P.CER[1:100,"time"], P.CER[1:100,"Z1"], ylim = c(-.15,0), col = 27,
      xlab = "Time", ylab = "Axial Strain") # green
 par(new = T)
@@ -66,30 +48,29 @@ plot(PAR.TEST$TIME[1:100], PAR.TEST$EAC[1:100], ylim= c(-.15,0),xlab = "Time",
      ylab = "Axial Strain") # MEASURED AXIAL STRAIN
 par(new = F)
 
-# ==== DIAGNOSTICS BELOW ====
-# diagnostics(P.CER)
-plot(PAR.TEST$TIME, PAR.TEST$EAR) # MEASURED AXIAL STRAIN RATE
-
-plot(P.CER[,"time"], P.CER[,"Z1"])  # axial strain
-plot(P.CER[,"time"], P.CER[,"Z2"])  # lateral strain
-plot(P.CER[,"time"], P.CER[,"Z3"])  # xi
-
-plot(P.CER[1:25,"time"], P.CER[1:25,"Z1"])
-plot(P.CER[1:25,"time"], P.CER[1:25,"Z2"])
-# plot(P.CER[1:25,"time"], P.CER[1:25,"Z3"])
-
-COMP <- cbind(TIME = PAR.TEST$TIME, EAC = PAR.TEST$EAC, PEAC = P.CER[,"Z1"],
-              REAC = (PAR.TEST$EAC / P.CER[,"Z1"]))
-
-plot(COMP[,"TIME"], COMP[,"REAC"])
-
-x <- cbind(a = 1:3, pi = pi) # simple matrix with dimnames
-attributes(x)
-
-## strip an object's attributes:
-attributes(x) <- NULL
-x # now just a vector of length 6
-
-mostattributes(x) <- list(mycomment = "really special", dim = 3:2,
-                          dimnames = list(LETTERS[1:3], letters[1:5]), names = paste(1:6))
-x # dim(), but not {dim}names
+# # ==== DIAGNOSTICS BELOW ====
+# # diagnostics(P.CER)
+# plot(PAR.TEST$TIME, PAR.TEST$EAR) # MEASURED AXIAL STRAIN RATE
+#
+# plot(P.CER[,"time"], P.CER[,"Z1"])  # axial strain
+# plot(P.CER[,"time"], P.CER[,"Z2"])  # lateral strain
+# plot(P.CER[,"time"], P.CER[,"Z3"])  # xi
+#
+# plot(P.CER[1:25,"time"], P.CER[1:25,"Z1"])
+# plot(P.CER[1:25,"time"], P.CER[1:25,"Z2"])
+# # plot(P.CER[1:25,"time"], P.CER[1:25,"Z3"])
+#
+# COMP <- cbind(TIME = PAR.TEST$TIME, EAC = PAR.TEST$EAC, PEAC = P.CER[,"Z1"],
+#               REAC = (PAR.TEST$EAC / P.CER[,"Z1"]))
+#
+# plot(COMP[,"TIME"], COMP[,"REAC"])
+#
+# x <- cbind(a = 1:3, pi = pi) # simple matrix with dimnames
+# attributes(x)
+#
+# ## strip an object's attributes:
+# attributes(x) <- NULL
+# x # now just a vector of length 6
+#
+# mostattributes(x) <- list(mycomment = "really special", dim = 3:2,
+#                           dimnames = list(LETTERS[1:3], letters[1:5]), names = paste(1:6))
