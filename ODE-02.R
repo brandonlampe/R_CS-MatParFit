@@ -1,7 +1,19 @@
+# ==== "events" function, for specifying step functions ====
+# ---- SETS STRAINS AND RATES = 0 AT TIME == 0 ----
+eventfun <- function(Time, State, Parm){
+  with (as.list(State),{
+
+    # ---- if time == 0, derivative = 0 ----
+    DZ <- ifelse(c(Time == 0, Time == 0, Time == 0), {c(0, 0, 0)}, {DZ})
+
+    return(DZ)
+  })
+}
+
 
 # ==== DIFFERENTIAL EQUATION ====
-strain_Rates.02 <- function(Time, State, Parm){
-#   with(as.list(c(State, Parm)),{
+STRAINS.02 <- function(Time, State, Parm){
+  with(as.list(c(State, Parm)),{
     # function for calculating axial and lateral strain rates
     # Input must be in vector or matrix form, no data frames
     # Eqns. referenced from:  SAND97-2601
@@ -9,27 +21,8 @@ strain_Rates.02 <- function(Time, State, Parm){
     # FPar: KAP0, KAP1, KAP2, NK, DDT
     # TestData:
 
-    # ---- Flow Potential Parameters (5) *KAP2 HELD CONST. ----
-    #   KAP0  <- as.numeric(FPar[1])
-    #   KAP1 	<- as.numeric(FPar[2])
-    #   KAP2 	<- as.numeric(FPar[3])	# Constant = 1
-    #   DDT 	<- as.numeric(FPar[4])
-    #   NK 		<- as.numeric(FPar[5])
-    # ---- Creep Consolidation Parameters (11) *ETA2 HELD CONST
-    #   ETA0   <- as.numeric(CPar[1])
-    #   ETA1 	<- as.numeric(CPar[2])
-    #   ETA2 	<- 1 #as.numeric(CPar[3])	# Constant = 1
-    #   NF 		<- as.numeric(CPar[4])
-    #   AA1 	<- as.numeric(CPar[5])
-    #   PP 		<- as.numeric(CPar[6])
-    #   NSP 	<- as.numeric(CPar[7])
-    #   R1 		<- as.numeric(CPar[8])
-    #   R3 		<- as.numeric(CPar[9])
-    #   R4 		<- as.numeric(CPar[10])
-    #   QSR 	<- as.numeric(CPar[11])
-
     # ============= parameters hard coded into function directly ========
-# browser()
+    # browser()
     KAP0 <- 10.119
     KAP1 <- 1.005
     DDT  <- 0.896
@@ -67,34 +60,12 @@ strain_Rates.02 <- function(Time, State, Parm){
     DELTA <- 0.58
     MU 		<- 12400
 
-    # ==== parameters loaded into function =========
-    # ---- Values input into function (18)----
-    #   ICASE	<- as.numeric(parameters[,1])	# TEST TYPE (1:Hyd Cons;2:Shear Cons;3:compaction)
-    #   ITEST <- as.character(parameters[,2])# TEST ID
-    #   TIME 	<- as.numeric(parameters[,3]) 	# TIME [SEC]
-    #   DT 		<- as.numeric(parameters[,4])	  # DELTA TIME [SEC]
-    #   TF 		<- as.numeric(parameters[,5])	# TOTAL TEST TIME [SEC]
-    #   TEMP 	<- as.numeric(parameters[,6])	  # TEMP [K]
-    #   AS 		<- as.numeric(parameters[,7])	  # AXIAL STRESS [MPA]
-    #   LS 		<- as.numeric(parameters[,8])	  # LATERAL STRESS [MPA]
-    #   EVT 	<- as.numeric(parameters[,9])	  # TOTAL TRUE VOLUMETRIC STRAIN
-    #   EVC 	<- as.numeric(parameters[,10])	# CREEP TRUE VOLUMETRIC STRAIN
-    #   EAT 	<- as.numeric(parameters[,11])	# TOTAL TRUE AXIAL STRAIN
-    #   EAC 	<- as.numeric(parameters[,12])	# CREEP TRUE AXIAL STRAIN
-    #   RHO 	<- as.numeric(parameters[,13])	# CURRENT DENSITY [KG/M3]
-    #   D 		<- as.numeric(parameters[,14])	# FRACTIONAL DENSITY
-    #   RHO0 	<- as.numeric(parameters[,15])	# DENSITY AT THE START OF CONSOLIDATION (<RHOI)
-    #   RHOI 	<- as.numeric(parameters[,16])	# DENSITY AT THE START OF CREEP
-    #   DD 		<- as.numeric(parameters[,17])	# AVERAGE GRAIN SIZE [MM]
-    #   W 		<- as.numeric(parameters[,18])	# WATER CONENT BY PERCENT WEIGHT
-
     # ---- fitting assumptions ----
     RHOIS <- 2160.0  # ASSUMED IN SITU SALT DENSITY
-#     DSP 	<- 0.64		# FRACTIONAL DENSITY OF RANDOM DENSE SPHERICAL PARTICLES
 
     # ---- interpolated input variables ----
     TIME <- time.interp(Time)
-# browser()
+    # browser()
     TEMP <- temp.interp(Time)
     AS   <- as.interp(Time)
     LS   <- ls.interp(Time)
@@ -111,27 +82,19 @@ strain_Rates.02 <- function(Time, State, Parm){
     #WT1 <- DT / NTIME	  # WEIGHTING FUNCTION FOR CREEP CONSOLIDATION PARAMETERS
     #WT 	<- 1					  # WEIGHTING FUNCTION FOR FLOW PARAMETERS
     # ==============================================================
-    Z1	<- State[1]  # Predicted axial strain (initial values)
-    Z2	<- State[2] # Predicted lateral strain (initial values)
-    Z3	<- State[3] # internal variable "xi" for the transient function (FU)
-#     TIME <- Time
-    RHOI <- Parm[1]  # DENSITY AT THE START OF CREEP
-    DD 	 <- Parm[2]  # AVERAGE GRAIN SIZE [MM]
-    W    <- Parm[3]
-
     # integral of Eqn 2-27, (initial values)
 
     # ==== define the differential equation ====
-# browser()
+    # browser()
     VOL  	<- Z1 + 2*Z2			    # VOLUMETRIC STRAIN
     VOLT	<- VOL + log(D0/DI)	# VOLUMETRIC STRAIN + INITIAL TRUE STRAIN ESTIMATE
     #DEN		<- DI/exp(VOL)			# CURRENT FRACTIONAL DENSITY
     DEN   <- D                  # CURRENT FRACTIONAL DENSITY
 
-#     ifelse(D >= 1,{
-#       MD <- 0  # if fractional density is 1, disclocation creep = 0
-#       SP <- 0},# if fractional density is 1, pressure solutioning = 0
-#     {VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY CEILING ISH
+    #     ifelse(D >= 1,{
+    #       MD <- 0  # if fractional density is 1, disclocation creep = 0
+    #       SP <- 0},# if fractional density is 1, pressure solutioning = 0
+    #     {VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY CEILING ISH
 
     VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY floor ISH
     # ==== DEBUG ====
@@ -181,7 +144,7 @@ strain_Rates.02 <- function(Time, State, Parm){
     BIGD <- ALPHA + BETA * log10(SEQF / MU)       # Work-Hardening parameter, Eqn 2-28
 
     FU <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
-                                          exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
+                                           exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
 
     # ==== DEBUG ====
     DEBUG.FU <- ifelse(Z3 == EFT, 0, ifelse(Z3 < EFT, -1, 1))
@@ -213,11 +176,73 @@ strain_Rates.02 <- function(Time, State, Parm){
     DZ1 <- (MD + SP) * F2A # derivative: axial strain rate
     DZ2 <- (MD + SP) * F2L # derivative: lateral strain rate
     DZ3 <- (FU - 1) * ESS  # derivative of internal variable "xi"
-#     browser()
+    #     browser()
     DZ <- list(c(DZ1, DZ2, DZ3), MD, FU, ESS, ES1, ES2, ES3, SP, DZ1, DZ2,
-               DZ3, F2A, F2L, EFT, SEQ, SEQF, BIGD, DEBUG.FU, DEBUG.GAMMA,
+               DZ3, F2A, F2L, EFT, SEQ, SEQF, BIGD, DEBUG.GAMMA,
                DEBUG.ES3, AS, LS)
 
     return(DZ)
-#   })
-}
+    })
+  }
+
+
+PAR.TEST <- DATA.INP[which(DATA.INP$ITEST == "SC1B"),] # SUBSET OF DATA FOR ANALYSIS
+PAR.TEST <- PAR.TEST[1:28,]
+# debug.out <- paste(CurrentDirectory,"debug_SC1B.csv",sep = "/")
+# write.table(ODE.DT,file = debug.out, sep = ",")
+
+# ---- linear interpolation functions to be called in "strain_Rates.01" ----
+time.interp <- approxfun(x = PAR.TEST$TIME, y = PAR.TEST$TIME)
+temp.interp <- approxfun(x = PAR.TEST$TIME, y = PAR.TEST$TEMP)
+as.interp   <- approxfun(x = PAR.TEST$TIME, y = PAR.TEST$AS)
+ls.interp   <- approxfun(x = PAR.TEST$TIME, y = PAR.TEST$LS)
+d.interp    <- approxfun(x = PAR.TEST$TIME, y = PAR.TEST$D)
+
+RHOI   <- as.numeric(PAR.TEST$RHOI[1])  # DENSITY AT THE START OF CREEP
+DD 		<- as.numeric(PAR.TEST$DD[1])	# AVERAGE GRAIN SIZE [MM]
+W 		<- as.numeric(PAR.TEST$W[1])	# WATER CONENT BY PERCENT WEIGHT
+
+PARM <- c(RHOI = RHOI, DD = DD, W = W) # CONSTANT TEST SPECIFIC PARAMETERS
+
+# ---- intial values for state variables ----
+Z1	<- 0 # Predicted axial strain (initial values)
+Z2	<- 0 # Predicted lateral strain (initial values)
+Z3	<- 0 # internal variable "xi" for the transient function (FU)
+# integral of Eqn 2-27, (initial values)
+
+IC <- (c(Z1 = Z1, Z2 = Z2, Z3 = Z3)) # array of initial values
+
+TIME <- PAR.TEST$TIME
+
+# ---- function for Predicting the Creep Strain(E) Rates ----
+P.CER <- ode(func = STRAINS.02, parms = PARM, y = IC,
+              times = TIME, verbose = TRUE)#, events = list(func = eventfun, time = 0),
+#method = "impAdams")
+
+# ==== DEBUG ====
+ODE.DT <- data.table(P.CER)
+setnames(ODE.DT,c("TIME", "Z1", "Z2", "Z3",
+                  "MD", "FU", "ESS",
+                  "ES1", "ES2", "ES3", "SP", "DZ1",
+                  "DZ2", "DZ3", "F2A", "F2L", "EFT", "SEQ",
+                  "SEQF", "BIGD", "DEBUG.GAMMA",
+                  "DEBUG.ES3", "AS", "LS"))
+
+# add ggplot here
+P.EC <- ggplot(ODE.DT, aes(x = TIME, color = "SC1B", STRAIN))
+P.EC <- P.EC + geom_point(aes(y = Z1, color = "Axial Strain"))
+P.EC <- P.EC + geom_point(aes(x = TIME, y = Z2, color = "Lateral Strain"))
+P.EC
+
+P.Z <- ggplot(ODE.DT, aes(x = TIME))
+P.Z <- P.Z + geom_point(aes(y = Z3, color = "blue"))
+P.Z
+
+P.EFT <- ggplot(ODE.DT, aes(x = TIME, EFT))
+P.EFT <- P.EFT + geom_point(aes(y = EFT, color = "Transient Strain Limit"))
+P.EFT
+
+P.S <- ggplot(ODE.DT, aes(x = TIME, STRESS))
+P.S <- P.S + geom_point(aes(y = LS, color = "LATERAL STRESS"))
+P.S <- P.S + geom_point(aes(y = AS, color = "AXIAL STRESS"))
+P.S
