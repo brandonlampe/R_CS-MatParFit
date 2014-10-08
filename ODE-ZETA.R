@@ -3,22 +3,17 @@
 # PARAMETERS ARE FOR COMPARISON OF CALLAHAN RESULTS IN MATHCAD FILE
 ##################################
 
+library(deSolve)
+library(pracma)
+library(fBasics)
+library(data.table)
+library(ggplot2)
+
 # ==== DIFFERENTIAL EQUATION ====
 ZETA.01 <- function(Time, State, Parm){
 
-#   # ---- EFFECTIVE STRESS PARAMETERS FOR CRUSHED SALT FORMULATION OF MODEL ----
-#   KAP0 <- 10.119
-#   KAP1 <- 1.005
-#   DDT  <- 0.896
-#   NK   <- 1.331
-#   KAP2 <- 1
-#   ETA0  <- 0.102854
-#   ETA1  <- 3.9387
-#   ETA2   <- 1
-#   NF 		<- 3.5122
-
   # ---- EFFECTIVE STRESS PARAMETERS FOR CRUSHED SALT FORMULATION OF MODEL ----
-#   # ---- VALUES FOR MATHCAD CHECK
+  # ---- VALUES FOR MATHCAD CHECK
   KAP0 <- 10.119
   KAP1 <- 1.005
   NK   <- 1.331
@@ -29,25 +24,6 @@ ZETA.01 <- function(Time, State, Parm){
   ETA1  <- 1
   ETA2   <- 0.7
   NF   	<- 8.40075
-
-#   # ---- Munson-Dawson Creep Parameters (17) ---- FOR CLEAN SALT
-#   A1   	<- 8.386e22
-#   A2 		<- 9.672e12
-#   Q1R 	<- 12581
-#   Q2R 	<- 5033
-#   N1 		<- 5.5
-#   N2 		<- 5.0
-#   B1 		<- 6.0856e6
-#   B2 		<- 3.034e-2
-#   Q 		<- 5335
-#   S0 		<- 20.57
-#   M 		<- 3
-#   K0 		<- 6.275e5
-#   C 		<- 9.198e-3
-#   ALPHA <- -17.37
-#   BETA 	<- -7.738
-#   DELTA <- 0.58
-#   MU 		<- 12400
 
   # ---- Munson-Dawson Creep Parameters (17) ---- FOR ARGILLACEOUS SALT
   A1    <- 1.407e23
@@ -69,11 +45,6 @@ ZETA.01 <- function(Time, State, Parm){
   MU 		<- 12400
 
   #---- DATA INTERPRETED FROM TEST DATA
-#   TEMP <- temp.interp(Time)
-#   AS   <- as.interp(Time)
-#   LS   <- ls.interp(Time)
-#   D    <- d.interp(Time)
-
   #---- constant data values for comparison to Callahan's analysis
   TEMP <- 300
   AS   <- (-6/300.8)*Time
@@ -112,7 +83,6 @@ ZETA.01 <- function(Time, State, Parm){
   ESS = ES1 + ES2 + ES3 # Steady-state strain rate, Eqn. 2-29 (SAND97-2601)
 
   # ---- EVALUATE TRANSIENT FUNCTION, 3 branches: work hardening, equilibrium, recovery
-#   browser()
   EFT  <- K0 * exp(C * TEMP) * (SEQF / MU) ^ M  # Transient Strain Limit, Eqn. 2-28
   BIGD <- ALPHA + BETA * log10(SEQF / MU)       # Work-Hardening parameter, Eqn 2-28
 
@@ -209,56 +179,3 @@ pdf(file = paste(PATH, FILE.NAME, sep = ""), onefile = TRUE)
 P.Z
 P.SEQF
 dev.off()
-# #=======================================================================
-# # ----  PLOT DATA ---------------------------
-# P.Z <- ggplot(ODE.DT, aes(x = TIME))
-# P.Z <- P.Z + geom_point(aes(y = Z3, color = "ZETA"))
-# P.Z <- P.Z + geom_point(aes(x = TIME, y = EFT, color = "TRANS STRAIN LIMIT (EFT)"))
-# P.Z
-#
-# P.Z2 <- ggplot(ODE.DT2, aes(x = TIME))
-# P.Z2 <- P.Z2 + geom_point(aes(y = Z3, color = "ZETA"))
-# P.Z2 <- P.Z2 + geom_point(aes(y = EFT, color = "TRANS STRAIN LIMIT (EFT)"))
-# P.Z2
-#
-# P.ZE <- ggplot(ODE.DT, aes(x = TIME))
-# P.ZE <- P.ZE + geom_point(aes(y = ZETA.EFT, color = "ZETA MINUS EFT"))
-# P.ZE
-#
-# P.ZETA <- ggplot(ODE.DT, aes(x = TIME))
-# P.ZETA <- P.ZETA + geom_point(aes(y = Z3, color = "ZETA"))
-# P.ZETA
-#
-# P.ZETA2 <- ggplot(ODE.DT2, aes(x = TIME))
-# P.ZETA2<- P.ZETA2 + geom_point(aes(y = Z3, color = "ZETA"))
-# P.ZETA2
-#
-# P.SEQF <- ggplot(ODE.DT2, aes(x = TIME))
-# P.SEQF <- P.SEQF + geom_point(aes(y = SEQF, color = "Equivalent Stress"))
-# P.SEQF
-#
-# P.FU <- ggplot(ODE.DT2, aes(x = TIME))
-# P.FU <- P.FU + geom_point(aes(y = FU, color = "Transient Function"))
-# P.FU
-#
-# P.ESS <- ggplot(ODE.DT2, aes(x = TIME))
-# P.ESS <- P.ESS + geom_point(aes(y = ESS, color = "Steady-State Strain Rate"))
-# P.ESS
-#
-# P.S <- ggplot(ODE.DT2, aes(x = TIME, STRESS))
-# P.S <- P.S + geom_point(aes(y = AS, color = "axial stress"))
-# P.S <- P.S + geom_point(aes(y = LS, color = "lateral stress"))
-# P.S
-#
-# # # ---- EXPORT AND SAVE FILES AS PDF
-# PATH = "/Users/Lampe/GrantNo456417/MatParameterFitting/R_CS-MatParFit"
-# FILE.NAME = "/ZetaAnalysis.pdf"
-# pdf(file = paste(PATH, FILE.NAME, sep = ""), onefile = TRUE)
-#   P.Z2
-#   P.ZETA2
-#   P.SEQF
-#   P.FU
-#   P.ESS
-#   P.S
-# dev.off()
-#

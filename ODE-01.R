@@ -1,21 +1,9 @@
 #############################
 # solves differential equation for creep consolidation with presecribed stress
+# runs one test at a time, e.g., SC1B
 #############################
 
 source("DoAll.R")
-
-# ==== "events" function, for specifying step functions ====
-# ---- SETS STRAINS AND RATES = 0 AT TIME == 0 ----
-eventfun <- function(Time, State, Parm){
-  with (as.list(State),{
-
-    # ---- if time == 0, derivative = 0 ----
-    DZ <- ifelse(c(Time == 0, Time == 0, Time == 0), {c(0, 0, 0)}, {DZ})
-
-    return(DZ)
-  })
-}
-
 
 # ==== DIFFERENTIAL EQUATION ====
 STRAINS.01 <- function(Time, State, Parm){
@@ -29,7 +17,6 @@ STRAINS.01 <- function(Time, State, Parm){
 
 
   # ============= parameters hard coded into function directly ========
-  # browser()
   KAP0 <- 10.119
   KAP1 <- 1.005
   DDT  <- 0.896
@@ -43,7 +30,7 @@ STRAINS.01 <- function(Time, State, Parm){
   AA1 	<- 0.3147          # -
   PP 		<- 1.6332          # -
   NSP 	<- 0.557621        # -
-  R1 		<- 0.0194 # [K/(MPa-sec)]
+  R1 		<- 0.0194          # [K/(MPa-sec)]
   R3 		<- 15.1281         # -
   R4 		<- 0.1677765       # -
   QSR 	<- 1077.46         # [K]
@@ -86,7 +73,7 @@ STRAINS.01 <- function(Time, State, Parm){
   Z1	<- State[1]  # Predicted axial strain (initial values)
   Z2	<- State[2] # Predicted lateral strain (initial values)
   Z3	<- State[3] # internal variable "zeta" for the transient function (FU)
-  #     TIME <- Time
+
   RHOI <- Parm[1]  # DENSITY AT THE START OF CREEP
   DD 	 <- Parm[2]  # AVERAGE GRAIN SIZE [MM]
   W    <- Parm[3]
@@ -98,104 +85,79 @@ STRAINS.01 <- function(Time, State, Parm){
   VOLT	<- VOL + log(D0/DI)	  # VOLUMETRIC STRAIN + INITIAL TRUE STRAIN ESTIMATE
   DEN   <- DI/exp(VOL)        # CURRENT FRACTIONAL DENSITY
 
-  #     ifelse(D >= 1,{
-  #       MD <- 0  # if fractional density is 1, disclocation creep = 0
-  #       SP <- 0},# if fractional density is 1, pressure solutioning = 0
-  #     {VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY CEILING ISH
+  ifelse(DEN >= 1,{
+    MD <- 0  # if fractional density is 1, disclocation creep = 0
+    SP <- 0},# if fractional density is 1, pressure solutioning = 0
+  {
+    VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY floor ISH
+    # ==== DEBUG ====
 
-  VAR <- ifelse(DEN <= DDT, DDT, DEN) # DEFINE DENSITY floor ISH
-  # ==== DEBUG ====
-  DEBUG.VAR <- ifelse(DEN <= DDT, 1, -1)
+    # ---- Equivalent Stress ----
+    OMEGAA 	<- ((1 - DEN) * NF / (1 - (1 - DEN)^(1/NF))^NF)^(2/(NF + 1))
+    OMEGAK 	<- ((1 - VAR) * NK / (1 - (1 - VAR)^(1/NK))^NK)^(2/(NK + 1))
+    ETA		<- ETA0 * OMEGAA^ETA1
+    KAP		<- KAP0 * OMEGAK^KAP1
+    TERMA	<- ((2 - DEN)/DEN)^((2 * NF)/(NF + 1))
+    TERMK	<- ((2 - DEN)/DEN)^((2 * NK)/(NK + 1))
 
-  # ---- Equivalent Stress ----
-  OMEGAA 	<- ((1 - DEN) * NF / (1 - (1 - DEN)^(1/NF))^NF)^(2/(NF + 1))
-  OMEGAK 	<- ((1 - VAR) * NK / (1 - (1 - VAR)^(1/NK))^NK)^(2/(NK + 1))
-  ETA		<- ETA0 * OMEGAA^ETA1
-  KAP		<- KAP0 * OMEGAK^KAP1
-  TERMA	<- ((2 - DEN)/DEN)^((2 * NF)/(NF + 1))
-  TERMK	<- ((2 - DEN)/DEN)^((2 * NK)/(NK + 1))
+    # ---- Eqn. 2-3 (SAND97-2601) ----
+    # Equivalent stress measure for Disl. Creep and Press Sol'ing
+    SEQF	<- sqrt(ETA * MS^2 + ETA2 * TERMA * DS^2)
+    # Equivalent stress measure for Flow Potential
+    SEQ		<- sqrt(KAP * MS^2 + KAP2 * TERMK * DS^2)
 
-  # ---- Eqn. 2-3 (SAND97-2601) ----
-  # Equivalent stress measure for Disl. Creep and Press Sol'ing
-  SEQF	<- sqrt(ETA * MS^2 + ETA2 * TERMA * DS^2)
-  # Equivalent stress measure for Flow Potential
-  SEQ		<- sqrt(KAP * MS^2 + KAP2 * TERMK * DS^2)
+    # ---- Eqn. 2-17 (SAND97-2601) ----
+    ALPHA2	<- KAP * MS / 3
+    BETA2	<- KAP2 * TERMK * DS
 
-  # ---- Eqn. 2-17 (SAND97-2601) ----
-  ALPHA2	<- KAP * MS / 3
-  BETA2	<- KAP2 * TERMK * DS
+    # ---- Eqn. 2-20, WithOUT dislocation creep and pressure solutioning ----
+    F2A <- 	(ALPHA2 - BETA2)/SEQ        # fit to axial strains
+    F2L <-	(ALPHA2 + 0.5 * BETA2)/SEQ  # fit to lateral strains
+    F2V <-  3 * ALPHA2 / SEQ            # fit to volumetric strains
 
-  # ---- Eqn. 2-20, WithOUT dislocation creep and pressure solutioning ----
-  F2A <- 	(ALPHA2 - BETA2)/SEQ        # fit to axial strains
-  F2L <-	(ALPHA2 + 0.5 * BETA2)/SEQ  # fit to lateral strains
-  F2V <-  3 * ALPHA2 / SEQ            # fit to volumetric strains
+    # ==== START: equivalent inelastic strain rate form for dislocation creep ====
+    # ---- Steady State Strain Rate Calc ----
+    ES1 <- A1 * (SEQF / MU)^N1 * exp(-Q1R/TEMP)	# Dislocation climb - Eqn. 2-30
+    ES2 <- A2 * (SEQF / MU)^N2 * exp(-Q2R/TEMP)	# Undefined Mechanism - Eqn. 2-31
 
-  # ==== START: equivalent inelastic strain rate form for dislocation creep ====
+    # Slip - Eqn. 2-32 (SAND98-2601)
+    H   <- SEQF - S0 # HEAVISIDE FUNCTION
+    ARG <- Q * (SEQF - S0) / MU
+    ES3 <- ifelse(H >= 0, 0.5 * (B1 * exp(-Q1R / TEMP) + B2 * exp(-Q2R / TEMP)) *
+                    (exp(ARG) - exp(-ARG)),0)
+    # ==== DEBUG ====
+    DEBUG.ES3 <- ifelse(H >=0, 1, -1)
 
-  # ---- Steady State Strain Rate Calc ----
-  ES1 <- A1 * (SEQF / MU)^N1 * exp(-Q1R/TEMP)	# Dislocation climb - Eqn. 2-30
-  ES2 <- A2 * (SEQF / MU)^N2 * exp(-Q2R/TEMP)	# Undefined Mechanism - Eqn. 2-31
+    ESS = ES1 + ES2 + ES3 # Steady-state strain rate, Eqn. 2-29 (SAND97-2601)
 
-  # Slip - Eqn. 2-32 (SAND98-2601)
-  H   <- SEQF - S0 # HEAVISIDE FUNCTION
-  ARG <- Q * (SEQF - S0) / MU
-  ES3 <- ifelse(H >= 0, 0.5 * (B1 * exp(-Q1R / TEMP) + B2 * exp(-Q2R / TEMP)) *
-                  (exp(ARG) - exp(-ARG)),0)
-  # ==== DEBUG ====
-  DEBUG.ES3 <- ifelse(H >=0, 1, -1)
+    # ---- EVALUATE TRANSIENT FUNCTION, 3 branches: work hardening, equilibrium, recovery
+    EFT  <- K0 * exp(C * TEMP) * (SEQF / MU) ^ M  # Transient Strain Limit, Eqn. 2-28
+    BIGD <- ALPHA + BETA * log10(SEQF / MU)       # Work-Hardening parameter, Eqn 2-28
 
-  ESS = ES1 + ES2 + ES3 # Steady-state strain rate, Eqn. 2-29 (SAND97-2601)
-
-  # ---- EVALUATE TRANSIENT FUNCTION, 3 branches: work hardening, equilibrium, recovery
-  EFT  <- K0 * exp(C * TEMP) * (SEQF / MU) ^ M  # Transient Strain Limit, Eqn. 2-28
-  BIGD <- ALPHA + BETA * log10(SEQF / MU)       # Work-Hardening parameter, Eqn 2-28
-
-  # ==== LOOP TO SOLVE FOR FU (DEPENDENT ON Z3 )
-  TIME.LAG <- TIME - .1
-  if (TIME.LAG > 0) {
-#   if(TIME >= 481)  browser()
-    DZ3.LAG <- lagderiv(TIME.LAG)[3]
-    ITER.MAX <- 25
-    ITER <- 0
-    repeat{
-      ITER <- ITER + 1
-      Z3.OLD <- Z3
-      FU <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
-                                        exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
-      DZ3 <- (FU - 1) * ESS
-      Z3 <- 0.5 * (TIME - TIME.LAG) * (DZ3 + DZ3.LAG) + lagvalue(TIME.LAG)[3]
-      ERROR <- abs(Z3 - Z3.OLD)
-      if(ERROR <= 1E-14 | ITER >= ITER.MAX)
-      {break}}
-  } else {
     FU <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
-                                      exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
-  }
+                                        exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
 
-  FU.TEST <- ifelse(Z3 == EFT, 1, ifelse(Z3 < EFT, exp(BIGD * (1 - Z3 / EFT) ^ 2),
-                                         exp(-DELTA * (1 - Z3 / EFT) ^ 2)))
+    MD <- FU * ESS  # equivalent inelastic strain rate form for dislocation creep, Eqn 2-23
 
-  MD <- FU * ESS  # equivalent inelastic strain rate form for dislocation creep, Eqn 2-23
+    # ==== START: Equivalent Inelastic Strain Rate Form for Pressure Solutioning ====
+    # ---- Calculate initial volumetric strain - Based on spherical packing ----
+    CR <- abs(exp(VOLT) - 1) # USES THE DEFINITION OF ENGINEERING STRAIN
 
-  # ==== START: Equivalent Inelastic Strain Rate Form for Pressure Solutioning ====
-  # ---- Calculate initial volumetric strain - Based on spherical packing ----
-  CR <- abs(exp(VOLT) - 1) # USES THE DEFINITION OF ENGINEERING STRAIN
+    # ---- Determine functional form - either large or small strains, Eqn 2-34 ----
+    GAMMA <- ifelse(CR <= 0.15, 1, (abs((D0 - exp(VOLT)) / ((1 - D0) * exp(VOLT)))) ^ NSP)
+    # Small Strains (Vol Strain > - 15%)
+    # Large Strains (Vol Strain < - 15%)
 
-  # ---- Determine functional form - either large or small strains, Eqn 2-34 ----
-  GAMMA <- ifelse(CR <= 0.15, 1, (abs((D0 - exp(VOLT)) / ((1 - D0) * exp(VOLT)))) ^ NSP)
-  # Small Strains (Vol Strain > - 15%)
-  # Large Strains (Vol Strain < - 15%)
+    # ---- component of eqn 2-35 ---
+    X3 <- exp((R3 - 1) * VOLT) / (abs(1 - exp(VOLT))) ^ R4
 
-  # ---- component of eqn 2-35 ---
-  X3 <- exp((R3 - 1) * VOLT) / (abs(1 - exp(VOLT))) ^ R4
+    # ---- determine value of moisture function (w) ----
+    M2 <- ifelse (W == 0, 0, W ^ AA1)
 
-  # ---- determine value of moisture function (w) ----
-  M2 <- ifelse (W == 0, 0, W ^ AA1)
-
-  # ---- Equivalent Inelastic Strain Rate Form for Pressure Solutioning, Eqn 2-35
-  G2 <- 1 / DD ^ PP # calculate grain size function
-  T2 <- exp(-QSR / TEMP) / TEMP
-  SP <- R1 * M2 * G2 * T2 * X3 * GAMMA * SEQF #})
+    # ---- Equivalent Inelastic Strain Rate Form for Pressure Solutioning, Eqn 2-35
+    G2 <- 1 / DD ^ PP # calculate grain size function
+    T2 <- exp(-QSR / TEMP) / TEMP
+    SP <- R1 * M2 * G2 * T2 * X3 * GAMMA * SEQF })
 
   DZ1 <- (MD + SP) * F2A # derivative: axial strain rate
   DZ2 <- (MD + SP) * F2L # derivative: lateral strain rate
@@ -205,9 +167,7 @@ STRAINS.01 <- function(Time, State, Parm){
              ES3, SP, DZ1, DZ2, DZ3, F2A, F2L, EFT, SEQ, SEQF, BIGD,
              AS, LS, DEN, GAMMA)
   return(DZ)
-  #   })
 }
-
 
 TestName = "SC1B"
 PAR.TEST <- DATA.INP[which(DATA.INP$ITEST == TestName),] # SUBSET OF DATA FOR ANALYSIS
@@ -263,12 +223,13 @@ colnames(MVSP.DF) <- c("TIME", "AS", "LS", "ELC", "EAC", "D", "ITEST", "TYPE")
 EAC.MVSP <- ggplot(MVSP.DF, aes(x = TIME, color = TYPE))
 EAC.MVSP <- EAC.MVSP + geom_point(aes(y = EAC, shape = TYPE))
 EAC.MVSP <- EAC.MVSP + ylab("AXIAL CREEP STRAIN")
-EAC.MVSP
 
 ELC.MVSP <- ggplot(MVSP.DF, aes(x = TIME, color = TYPE))
 ELC.MVSP <- ELC.MVSP + geom_point(aes(y = ELC, shape = TYPE))
-ELC.MVSP <- ELC.MVSP + ylab("LATERAL CREEP STRAIN")
+ELC.MVSP <- ELC.MVSP + geom_line(aes(y = EAC, shape = TYPE))
+ELC.MVSP <- ELC.MVSP + ylab("CREEP STRAIN")
 ELC.MVSP
+grid.arrange(EAC.MVSP, ELC.MVSP, ncol = 2)
 
 DEN.MVSP <- ggplot(MVSP.DF, aes(x=TIME, color = TYPE))
 DEN.MVSP <- DEN.MVSP + geom_point(aes(y = D))

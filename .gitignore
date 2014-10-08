@@ -1,9 +1,13 @@
 # History files
 .Rhistory
-
 # Example code in package build process
 *-Ex.R
-
 # R data files from past sessions
 .Rdata
 .Rproj.user
+EARvsFEAR_SC.pdf
+EAC_ModelVsPred_SC1A.pdf
+CreepScript_SUBTEST_SC1B-EAR.pdf
+CreepScript_SUBTEST_SC1B-EA.pdf
+ODE-ZETA-concordance.tex
+Zeta_MCD_Files_V02.pdf
