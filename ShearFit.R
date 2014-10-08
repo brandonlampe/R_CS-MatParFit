@@ -2,16 +2,16 @@
 
 source("Func.R")
 #====================================
-AS <- as.numeric(DATA.NZ$AS)          # axial stress [MPa]
-LS <- as.numeric(DATA.NZ$LS)          # lateral stress [MPa]
-D  <- as.numeric(DATA.NZ$D)           # fraction density
+AS <- as.numeric(DATA.INP$AS)          # axial stress [MPa]
+LS <- as.numeric(DATA.INP$LS)          # lateral stress [MPa]
+D  <- as.numeric(DATA.INP$D)           # fraction density
 
 InVar    <- cbind(AS,LS,D)            # varibales input into nls.LM for fitting
-RAT.MEAS <- ifelse(DATA.NZ$TIME > 0,
-                   DATA.NZ$ELR /
-                   DATA.NZ$EAR, 0) # measured lateral-to-axial strain rates
+RAT.MEAS <- ifelse(DATA.INP$TIME > 0,
+                   DATA.INP$ELR /
+                   DATA.INP$EAR, 0) # measured lateral-to-axial strain rates
 
-# ---- starting parameter values (from Callahan) ----
+# ---- starting parameter values (from Callahan:  SAND98-2680) ----
 KAP0.INP <- 10.119
 KAP1.INP <- 1.005
 DDT.INP  <- 0.896
